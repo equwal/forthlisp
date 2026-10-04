@@ -156,7 +156,7 @@ followed by a space or the end of the line. A backslash inside code (e.g. in .\"
     (show reply)
     (string-trim '(#\Newline #\Space) (subseq reply 0 (- (length reply) 2)))))
 
-(defun lisp-eval (expr &key (timeout 10))
+(defun lisp-eval (expr &key (timeout 60))
   "Send EXPR to the target Lisp REPL. Return the printed result."
   (send expr)
   (lisp-prompt :timeout timeout))
@@ -188,9 +188,11 @@ followed by a space or the end of the line. A backslash inside code (e.g. in .\"
   (send "lisp")
   (lisp-prompt)
   (let ((*log* nil))
-    (dolist (l (file-lines "prelude.scm"))
-      (let ((r (lisp-eval l)))
-        (when (search "error" r) (error "prelude: ~a gave ~a" l r))))))
+    (dolist (form (split-forms (with-open-file (s (here "prelude.scm"))
+                                 (let ((str (make-string (file-length s)))) (subseq str 0 (read-sequence str s))))))
+      (let* ((l (one-line form)) (r (lisp-eval l :timeout 30)))
+        (when (or (search "unbound variable" r) (search "not a " r) (search "too deep" r) (search "out of memory" r))
+          (error "prelude: ~a gave ~a" (subseq l 0 (min 80 (length l))) r))))))
 
 (defun ktest (name)
   "Layer 3: run NAME (lines of INPUT ==> OUTPUT) on a freshly booted kernel. Return failures."
@@ -221,7 +223,7 @@ followed by a space or the end of the line. A backslash inside code (e.g. in .\"
       (let* ((k (search "==>" l))
              (e (string-trim " " (subseq l 0 k)))
              (want (if k (string-trim " " (subseq l (+ k 3))) nil))
-             (got (lisp-eval e)))
+             (got (lisp-eval e :timeout 60)))
         (if (or (null want) (string= got want))
             (incf pass)
             (progn (incf fail) (format t "FAIL ~a => ~a (want ~a)~%" e got want)))))

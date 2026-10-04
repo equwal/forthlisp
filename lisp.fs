@@ -14,18 +14,18 @@
 \ GC: mark-sweep, run when cons finds the free list empty. Roots: the symbol list, plus
 \ every word on the data and return stacks that looks like a heap reference (conservative).
 
-49152 constant heapsize
+61440 constant heapsize
 heapsize buffer: heap
 heapsize 64 / buffer: marks   \ one bit per 8-byte cell
-16384 constant bsize   \ blob heap for strings, vectors, bytevectors
+12288 constant bsize   \ blob heap for strings, vectors, bytevectors
 bsize buffer: bheap
 0 variable btop
-4096 constant namesize
+10240 constant namesize
 namesize buffer: names
 64 buffer: tok
 128 cells buffer: prims
 32 cells buffer: forms        \ special-form handlers
-512 constant linesize   \ one REPL line; an expression may span lines
+2048 constant linesize  \ one REPL line; an expression may span lines
 linesize buffer: lbuf
 0 variable lpos  0 variable llen
 0 variable free  0 variable ntop  0 variable syms  0 variable nprims  0 variable nforms
@@ -51,14 +51,20 @@ linesize buffer: lbuf
 : car! ( v p -- ) addr ! ;
 : cdr! ( v p -- ) addr cell+ ! ;
 36 constant strtag  44 constant vectag  68 constant bvtag
+76 constant mactag  84 constant conttag  92 constant rectag   \ macro, continuation, record
 : box? ( v tag -- f ) over 7 and 6 = if swap car = else 2drop false then ;
 : proc? ( v -- f ) dup 7 and 6 = if car 7 and 4 <> else drop false then ;  \ boxes have an immediate tag in car
 : truth ( v -- f ) #f <> ;
 : bool ( f -- v ) if #t else #f then ;
 : (eval) 'eval @ execute ;  : (read) 'read @ execute ;  : (print) 'print @ execute ;
 
-: err ( addr len -- ) type cr  rsave @ 0= if quit then
+: repl-reset ( -- ) rsave @ 0= if quit then
   1 lpos ! 0 llen ! -1 pk !  ssave @ sp! rsave @ rp! 'repl @ execute ;
+0 variable 'raise-error   \ set below: ( i a n -- i a n ) raises a Scheme error object if a handler exists
+0 variable inerr           \ set while building that object, so an error inside it is not raised again
+: errv ( irritant addr len -- ) 'raise-error @ ?dup if execute then 0 inerr !
+  type dup unspec <> if ." : " (print) else drop then cr repl-reset ;
+: err ( addr len -- ) unspec -rot errv ;
 : pair ( v -- v ) dup pair? 0= if s" not a pair" err then ;
 : num ( v -- n ) dup fixnum? 0= if s" not a number" err then unfix ;
 
@@ -117,6 +123,10 @@ linesize buffer: lbuf
 
 0 ntop ! 0 syms ! 0 nprims ! 0 nforms ! gc
 token quote intern constant s-quote
+token quasiquote intern constant s-qq  token unquote intern constant s-uq
+token unquote-splicing intern constant s-uqs  token %syntax-rules intern constant s-%sr
+token *handlers* intern constant s-handlers  token %make-error intern constant s-mkerr
+token raise intern constant s-raise
 token else intern constant s-else
 token => intern constant s-=>
 
@@ -234,11 +244,14 @@ token => intern constant s-=>
   cname dup 0< if drop s" bad character name" err then mkchar ;
 : rdlist ( -- list ) skipws getc
   dup 41 = if drop 0 exit then
-  dup 46 = if drop (read) skipws getc drop exit then
+  dup 46 = if drop getc dup delim? if drop (read) skipws getc drop exit then  \ a lone . is the dot
+    pk ! 46 tok c! 1 rdtok atom recurse cons exit then                        \ ... .5 start a token
   pk ! (read) recurse cons ;
 : read ( -- v ) skipws getc
   dup 40 = if drop rdlist exit then
   dup 39 = if drop s-quote recurse 0 cons cons exit then
+  dup 96 = if drop s-qq recurse 0 cons cons exit then
+  dup 44 = if drop getc dup 64 = if drop s-uqs else pk ! s-uq then recurse 0 cons cons exit then
   dup 41 = if drop s" unexpected )" err then
   dup 34 = if drop rdstr l>s exit then
   dup 35 = if drop getc dup 40 = if drop rdlist l>v exit then
@@ -287,6 +300,9 @@ token => intern constant s-=>
   dup bvtag box? if pbv exit then
   dup rat? if cdr dup car pnum 47 emit cdr pnum exit then
   dup flo? if cdr pflo exit then
+  dup mactag box? if drop ." #<macro>" exit then
+  dup conttag box? if drop ." #<continuation>" exit then
+  dup rectag box? if ." #<record " cdr bdat @ recurse ." >" exit then
   dup proc? if drop ." #<procedure>" exit then
   dup special? if drop ." #<syntax>" exit then
   dup pair? 0= if drop exit then
@@ -299,7 +315,7 @@ token => intern constant s-=>
 : where ( sym env -- binding | 0 )
   begin dup while 2dup car car = if nip car exit then cdr repeat 2drop 0 ;
 : lookup ( sym env -- v ) over swap where ?dup if nip cdr exit then
-  dup cdr dup unbound <> if nip exit then drop ." unbound variable: " name type s"  " err ;
+  dup cdr dup unbound <> if nip exit then drop s" unbound variable" errv ;
 : frame ( env -- env' ) #f #f cons swap cons ;   \ a dummy binding that internal defines can follow
 : bind ( params args env -- env' )
   begin 2 pick pair? while over pair? 0= if s" too few arguments" err then
@@ -315,7 +331,11 @@ token => intern constant s-=>
 \ --- eval: handlers return ( x env 0 ) for a tail call or ( v -1 ) for a value ---
 : seq ( body env -- x env 0 | v -1 ) over 0= if 2drop unspec -1 exit then
   begin over cdr while over car over (eval) drop swap cdr swap repeat swap car swap 0 ;
+0 variable kval  0 variable krp
+: throwk ( v k -- ) dup cdr #f = if s" continuation called outside its extent (escape-only)" err then
+  swap kval ! cdr dup cdr unfix krp ! car unfix sp! kval @ krp @ rp! ;
 : applyc ( f args -- x env 0 | v -1 )
+  over conttag box? if car swap throwk then
   over proc? 0= if s" not a procedure" err then
   over car fixnum? if swap car unfix cells prims + @ execute -1 exit then
   over car swap rot cdr dup >r cdr frame bind r> car swap seq ;
@@ -326,8 +346,9 @@ token => intern constant s-=>
     over sym? if lookup exit then
     over pair? 0= if drop exit then
     over car over recurse
+    dup mactag box? if cdr rot 0 cons apply swap 0 else
     dup special? if 3 rshift 16 - cells forms + @ execute
-    else -rot swap cdr swap evlis applyc then
+    else -rot swap cdr swap evlis applyc then then
   until ;
 ' eval 'eval !
 
@@ -387,6 +408,7 @@ token => intern constant s-=>
 : stepvals ( vars env -- vals ) over 0= if drop exit then
   over car cdr cdr dup if car over (eval) else drop over car car over lookup then
   >r swap cdr swap recurse r> swap cons ;
+: f-syntax-rules ( x env ) drop cdr 0 cons s-%sr cdr swap apply -1 ;
 : f-do ( x env ) swap cdr swap  over car over dup frame swap lbind
   begin 2 pick cdr car car over (eval) truth 0= while
     2 pick cdr cdr over seqall
@@ -399,6 +421,8 @@ token => intern constant s-=>
 ' f-letrec defform letrec*   ' f-cond defform cond   ' f-case defform case
 ' f-and defform and   ' f-or defform or   ' f-when defform when
 ' f-unless defform unless   ' f-do defform do
+' f-define defform define-syntax   ' f-let defform let-syntax   ' f-letrec defform letrec-syntax
+' f-syntax-rules defform syntax-rules
 
 \ --- primitives written in Forth; prims.lisp adds the rest ---
 : defprim ( xt "name" -- ) token intern >r nprims @ dup 1+ nprims !
@@ -463,6 +487,23 @@ token => intern constant s-=>
 : p-set-car ( args -- v ) dup cdr car swap car pair car! unspec ;
 : p-set-cdr ( args -- v ) dup cdr car swap car pair cdr! unspec ;
 : p-forth ( args -- ) drop ssave @ sp! rsave @ rp! ;
+: p-macro ( args -- v ) car mactag swap cons 6 or ;
+: p-callcc ( args -- v )  \ escape-only: k returns from this call while the call is active
+  car sp@ 4 + fix rp@ fix cons conttag swap cons 6 or tuck 0 cons apply swap #f swap cdr! ;
+: p-mkrec ( args -- v ) l>v rectag swap cons 6 or ;
+: p-rec? ( args -- v ) car rectag box? bool ;
+: p-rectype ( args -- v ) car rectag chk cdr bdat @ ;
+: p-recref ( args -- v ) arg2 num 1+ swap rectag chk cdr swap 4 ix @ ;
+: p-recset ( args -- v ) arg3 >r num 1+ swap rectag chk cdr swap 4 ix r> swap ! unspec ;
+: p-reset ( args -- ) drop repl-reset ;
+: raise-error ( i a n -- i a n ) \ with a Scheme handler installed, raise an error object
+  inerr @ if exit then  s-handlers cdr pair? 0= if exit then  rsave @ 0= if exit then
+  -1 inerr !  2 pick 2 pick 2 pick
+  dup strtag newbox >r r@ bdat swap move r>   ( i a n i str )
+  swap dup unspec = if drop 0 else 0 cons then  ( i a n str irritants )
+  0 cons cons s-mkerr cdr swap apply   ( i a n error-object )
+  0 inerr !  s-raise cdr swap 0 cons apply drop ;
+' raise-error 'raise-error !
 : p-exact ( args -- v ) car exact ;
 : p-inexact ( args -- v ) car inexact ;
 : p-eqv ( args -- v ) dup car swap cdr car eqv bool ;
@@ -497,6 +538,9 @@ token => intern constant s-=>
 ' p-s>sym defprim string->symbol   ' p-sym>s defprim symbol->string
 ' p-newline defprim newline   ' p-set-car defprim set-car!   ' p-set-cdr defprim set-cdr!
 ' p-forth defprim forth
+' p-macro defprim %macro   ' p-callcc defprim %callcc   ' p-mkrec defprim %make-record
+' p-rec? defprim %record?   ' p-rectype defprim %record-type   ' p-recref defprim %record-ref
+' p-recset defprim %record-set!   ' p-reset defprim %repl-reset
 
 : repl begin 0 raw ! ." > " read 0 eval dup unspec = if drop else print then cr again ;
 ' repl 'repl !

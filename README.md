@@ -52,8 +52,8 @@ Needs SBCL, `qemu-system-arm`, `arm-none-eabi-as`/`objcopy` (for the assembler t
 
 ## Test counts (STM32F446 target, QEMU)
 
-- Our regression suite: see `conformance.txt` (317/317 at publication)
-- chibi-scheme R7RS suite: see `tests/r7rs/results.txt` (500 passed, 109 failed, 523 skipped
+- Our regression suite: see `conformance.txt` (380/380 at publication)
+- chibi-scheme R7RS suite: see `tests/r7rs/results.txt` (603 passed, 140 failed, 389 skipped
   of 1132 at publication; every skip names its reason)
 
 ## Limits
@@ -61,8 +61,8 @@ Needs SBCL, `qemu-system-arm`, `arm-none-eabi-as`/`objcopy` (for the assembler t
 - Fixnums are 31-bit; overflow is an error, and there are no bignums.
 - Inexact reals are IEEE single precision (the M4F FPU); R7RS expects double.
 - Characters are bytes; there is no Unicode.
-- No `define-syntax`, `call/cc`, `dynamic-wind`, exceptions, parameters, records,
-  libraries or ports yet. `NOTES.md` lists every deviation.
+- `syntax-rules` is not hygienic, and `call/cc` is escape-only. There are no libraries and no
+  ports beyond the console yet. `NOTES.md` lists every deviation.
 
 ## Influences
 

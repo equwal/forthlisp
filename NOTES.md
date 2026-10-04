@@ -114,14 +114,16 @@ What this design takes from them:
 | 1-2 assembler | `asm-test.lisp`: every encoder form vs `arm-none-eabi-as` (incl. FPv4-SP), plus repeated label references | 105/105 |
 | 3 kernel | `forth-tests.txt` via `host.lisp ktest`, fresh boot | 71/71 |
 | 4 Scheme | chibi-scheme's R7RS suite, `tests/r7rs/`, via `host.lisp suite` | see `tests/r7rs/results.txt` |
-| 4 Scheme | our own regression suite `r7rs-tests.scm` via `host.lisp test` | 317/317 |
+| 4 Scheme | our own regression suite `r7rs-tests.scm` via `host.lisp test` | 380/380 |
 
 - Kernel image: about 10.4 KiB of flash, 197 words (FPU words `f+ f- f* f/ s>f f>s fsqrt f< f=`).
 - RAM after `lisp.fs`, `prims.lisp` and `prelude.scm` load:
-  - cons heap 48 KiB (6143 cells);
-  - blob heap 16 KiB;
-  - symbol names 4 KiB;
-  - 23.5 KiB free (`unused` = 24112).
+  - cons heap 60 KiB (7679 cells);
+  - blob heap 12 KiB;
+  - symbol names 10 KiB;
+  - 5.9 KiB of dictionary free (`unused` = 5928).
+  The prelude grew with item 4. At 48 KiB of heap, the 20000-iteration tail-call test spent
+  most of its time in GC.
 - The kernel prints `Redefine NAME.` when a definition shadows an existing word, and `host.lisp`
   stops the load on it. A list-length word named `llen` once silently captured the reader's
   `llen` variable in every later word.
@@ -146,7 +148,9 @@ What this design takes from them:
   answering, every later test counts as failed.
 - First run on the own stack: 244 passed, 78 failed, 810 skipped, 1132 total. After item 1 (numbers): 302 passed, 119 failed, 711 skipped. After item 2 (characters,
   strings, vectors, bytevectors): 486 passed, 123 failed, 523 skipped. After item 3 (sqrt,
-  rounding): 500 passed, 109 failed, 523 skipped. It found two
+  rounding): 500 passed, 109 failed, 523 skipped. After items 4 and 5 (macros, call/cc,
+  dynamic-wind, exceptions, raisable primitive errors, values, promises, parameters, records):
+  603 passed, 140 failed, 389 skipped. It found two
   bugs, now fixed and covered by local regression tests: `list?` looped on a circular list,
   and `case` lacked `=>`.
 
@@ -173,8 +177,23 @@ Our own suite below stays local: a reported sieve program, string cases and thos
   The GC compacts live blobs. Missing from the string library: `string-fill!`, `string-copy!`,
   case conversion of whole strings, and `-ci` string comparisons.
 - `sqrt` is exact for exact squares (`(sqrt 1/4)` is `1/2`) and inexact otherwise. A negative argument gives `+nan.0`, because there are no complex numbers. `exact-integer-sqrt` returns a list `(s r)` until multiple values exist. `floor`, `ceiling`, `truncate` and `round` (half to even) handle rationals and floats. No `exp`, `log` or trigonometry yet.
-- No `define-syntax`/`syntax-rules`, `quasiquote`, `delay`/`force`, `call/cc`, `dynamic-wind`, `values`, exceptions, `guard`, parameters, records, libraries (`import`), ports beyond the console.
-- Errors print a message and return to the prompt; they are not raisable objects.
+- Macros: `define-syntax`, `let-syntax`, `letrec-syntax` and `syntax-rules` (with literals, `_`,
+  nested ellipses, custom ellipsis, `(... ...)`) are **not hygienic**. A template symbol means
+  whatever it means where the expansion lands. `quasiquote`, `delay`, `delay-force`, `guard`,
+  `parameterize`, `define-record-type`, `case-lambda`, `let-values` and `define-values` are
+  procedural macros in `prelude.scm`. `let-values` binds left to right, like `let*-values`.
+- `call/cc` is **escape-only**. A continuation works while its `call/cc` is still active.
+  Calling it later is an error. There is no re-entry and no generators. `dynamic-wind` runs the
+  *after* thunks when an escape leaves its extent.
+- Exceptions: `raise`, `raise-continuable`, `with-exception-handler`, `guard`, `error` and
+  error objects. Errors from primitives (`car` of a non-pair, a vector index out of range, an
+  unbound variable, ...) raise error objects when a handler is installed. Uncaught errors print
+  their message and irritants and return to the prompt. A `guard` with no matching clause
+  re-raises in the dynamic environment of the `guard`, not of the original `raise`. `too deep`
+  and `out of memory` are never raisable, because recovering needs the stack or heap they
+  report as exhausted.
+- Symbols are never garbage collected. Their names share a 10 KiB buffer.
+- No libraries (`import`) and no ports beyond the console yet.
 - Primitives check argument types but not arity; extra arguments are ignored.
 - Recursion depth is bounded by the 4 KiB stacks: non-tail recursion raises `too deep` between 150 and 200 levels (measured with `(d 150)` and `(d 200)`).
 - `define` returns the defined symbol (R7RS leaves the value unspecified).

@@ -345,3 +345,68 @@ y ==> (a . 4)
 (ceiling -7/2) ==> -3
 (truncate -7/2) ==> -3
 (floor 5) ==> 5
+; item 4: quasiquote, macros, promises, values, call/cc, dynamic-wind, exceptions, parameters, records
+`(1 ,(+ 1 1) ,@(list 3 4)) ==> (1 2 3 4)
+`(a b) ==> (a b)
+(let ((x 5)) `(x ,x)) ==> (x 5)
+(let ((xs '(1 2))) `(0 ,@xs 3 . 4)) ==> (0 1 2 3 . 4)
+(define-syntax swap! (syntax-rules () ((_ a b) (let ((tmp a)) (set! a b) (set! b tmp)))))
+(let ((x 1) (y 2)) (swap! x y) (list x y)) ==> (2 1)
+(define-syntax my-or (syntax-rules () ((_) #f) ((_ e) e) ((_ e r ...) (let ((t e)) (if t t (my-or r ...))))))
+(my-or #f #f 3) ==> 3
+(my-or) ==> #f
+(define-syntax my-let* (syntax-rules () ((_ () body ...) (let () body ...)) ((_ ((x v) rest ...) body ...) (let ((x v)) (my-let* (rest ...) body ...)))))
+(my-let* ((a 1) (b (+ a 1))) (* a b)) ==> 2
+(define-syntax for (syntax-rules (in) ((_ x in lst body ...) (for-each (lambda (x) body ...) lst))))
+(let ((s 0)) (for x in '(1 2 3) (set! s (+ s x))) s) ==> 6
+(let-syntax ((foo (syntax-rules () ((_ x) (* x 10))))) (foo 4)) ==> 40
+(force (delay (+ 1 2))) ==> 3
+(define count 0) ==> count
+(define pr (delay (begin (set! count (+ count 1)) count))) ==> pr
+(list (force pr) (force pr)) ==> (1 1)
+(promise? (make-promise 5)) ==> #t
+(force (make-promise 5)) ==> 5
+(force 7) ==> 7
+(call-with-values (lambda () (values 1 2)) +) ==> 3
+(call-with-values (lambda () 5) (lambda (x) (* x x))) ==> 25
+(let-values (((a b) (values 1 2)) ((c) (values 3))) (list a b c)) ==> (1 2 3)
+(let-values (((q r) (floor/ 7 2))) (list q r)) ==> (3 1)
+(let-values (((q r) (truncate/ -7 2))) (list q r)) ==> (-3 -1)
+(let-values (((s r) (exact-integer-sqrt 17))) (list s r)) ==> (4 1)
+(define-values (dq dr) (floor/ 17 5)) ==> 
+(list dq dr) ==> (3 2)
+(call/cc (lambda (k) (+ 1 (k 42)))) ==> 42
+(+ 1 (call-with-current-continuation (lambda (k) 2))) ==> 3
+(call/cc (lambda (k) (for-each (lambda (x) (if (> x 2) (k x))) '(1 2 3 4)) 'none)) ==> 3
+(let ((path '())) (dynamic-wind (lambda () (set! path (cons 'in path))) (lambda () (set! path (cons 'body path))) (lambda () (set! path (cons 'out path)))) (reverse path)) ==> (in body out)
+(let ((path '())) (call/cc (lambda (k) (dynamic-wind (lambda () (set! path (cons 'in path))) (lambda () (k 'x)) (lambda () (set! path (cons 'out path)))))) (reverse path)) ==> (in out)
+(guard (e (#t (list 'caught e))) (raise 'boom)) ==> (caught boom)
+(guard (e ((symbol? e) 'sym) ((string? e) 'str)) (raise "x")) ==> str
+(guard (e ((error-object? e) (error-object-message e))) (error "bad thing" 1 2)) ==> "bad thing"
+(guard (e ((error-object? e) (error-object-irritants e))) (error "bad" 1 2)) ==> (1 2)
+(with-exception-handler (lambda (e) 10) (lambda () (+ 1 (raise-continuable 'oops)))) ==> 11
+(guard (e (#t 'outer)) (guard (e2 ((string? e2) 'inner)) (raise 'sym))) ==> outer
+(guard (e (#t (list 'v e))) (+ 1 2)) ==> 3
+(error "plain" 'x) ==> plain x
+(define pa (make-parameter 10)) ==> pa
+(pa) ==> 10
+(parameterize ((pa 20)) (pa)) ==> 20
+(pa) ==> 10
+(define pb (make-parameter 5 (lambda (x) (* x 2)))) ==> pb
+(pb) ==> 10
+(parameterize ((pb 3)) (pb)) ==> 6
+(define-record-type point (make-point x y) point? (x point-x set-point-x!) (y point-y))
+(point-x (make-point 1 2)) ==> 1
+(let ((p (make-point 1 2))) (set-point-x! p 9) (point-x p)) ==> 9
+(point? (make-point 1 2)) ==> #t
+(point? 5) ==> #f
+(define cl (case-lambda ((x) 'one) ((x y) 'two) ((x . r) 'many))) ==> cl
+(list (cl 1) (cl 1 2) (cl 1 2 3)) ==> (one two many)
+; item 5: primitive errors are raisable error objects
+(guard (e (#t 'caught)) (car 5)) ==> caught
+(guard (e ((error-object? e) (error-object-message e))) (vector-ref (vector 1) 9)) ==> "index out of range"
+(guard (e ((error-object? e) (list (error-object-message e) (error-object-irritants e)))) undefined-thing) ==> ("unbound variable" (undefined-thing))
+(car 5) ==> not a pair
+(quote (a ... b)) ==> (a ... b)
+(quote (1 . 2)) ==> (1 . 2)
+(length (quote (rest ...))) ==> 2
