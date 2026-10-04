@@ -316,7 +316,8 @@ def main():
 <meta name="color-scheme" content="light dark">
 <title>Forth + Lisp on STM32</title><style>%s</style></head><body>
 <h1>Assembly &rarr; SBCL &rarr; Forth &rarr; Lisp on STM32</h1>
-<p class="mut">Generated from <a href="https://github.com/equwal/lisp-forth-lisp">equwal/lisp-forth-lisp</a> at %s by <code>docs/build-docs.py</code>. Do not edit the HTML; edit the sources.</p>
+<p>Source: <a href="https://github.com/equwal/forthlisp">equwal/forthlisp</a> (core: host Lisp, Scheme, R7RS harness) &middot; <a href="https://github.com/equwal/forthlisp-stm32">equwal/forthlisp-stm32</a> (Thumb-2 kernel, QEMU) &middot; <a href="https://github.com/equwal/forthlisp-z80">equwal/forthlisp-z80</a> (Z80 kernel, cpmsim). MIT licence.</p>
+<p class="mut">Generated at %s by <code>docs/build-docs.py</code>. Do not edit the HTML; edit the sources.</p>
 %s
 %s
 </body></html>
