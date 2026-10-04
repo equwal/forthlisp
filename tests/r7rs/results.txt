@@ -257,8 +257,6 @@ failures:
     => unbound variable: bytevector-copy!
 [6.9 Bytevectors] (test #u8(1 2 3 1 2) (let ((bv (bytevector 1 2 3 4 5))) (bytevector-copy! bv 3 bv 0 2) bv))
     => unbound variable: bytevector-copy!
-[6.10 Control Features] (test-error (apply +))
-    => <<fail no-error>>
 [6.10 Control Features] (test '(1 4 27 256 3125) (map (lambda (n) (expt n n)) '(1 2 3 4 5)))
     => unbound variable: expt
 [6.10 Control Features] (test #(1 4 27 256 3125) (vector-map (lambda (n) (expt n n)) '#(1 2 3 4 5)))
@@ -285,3 +283,5 @@ failures:
     => handler returned from raise #<record %error-object>
 [6.11 Exceptions] (let* ((out (open-output-string)) (value (test-exception-handler-4 0 out))) (test "reraised 0!" (get-output-string out)) (test 'zero value))
     => handler returned from raise #<record %error-object>
+[6.11 Exceptions] (test 'caught-d (guard (condition ((assq 'c condition) 'caught-c) ((assq 'd condition) 'caught-d)) (list (sqrt 8) (guard (condition ((assq 'a condition) => cdr)
+    => out of memory

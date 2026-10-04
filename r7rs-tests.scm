@@ -410,3 +410,15 @@ y ==> (a . 4)
 (quote (a ... b)) ==> (a ... b)
 (quote (1 . 2)) ==> (1 . 2)
 (length (quote (rest ...))) ==> 2
+; item 6: primitives check their argument count
+(car 1 2) ==> wrong number of arguments
+(cons 1) ==> wrong number of arguments
+(apply +) ==> wrong number of arguments
+(vector-ref (vector 1)) ==> wrong number of arguments
+(guard (e (#t (quote caught))) (car)) ==> caught
+((lambda (x) x)) ==> too few arguments
+; item 8: define returns an unspecified value; the REPL only echoes the name
+(let ((v (begin (define dv 5)))) (eq? v (quote dv))) ==> #f
+(begin (define dw 6)) ==>
+(define dz 7) ==> dz
+(define (dfn a) a) ==> dfn

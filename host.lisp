@@ -170,7 +170,7 @@ followed by a space or the end of the line. A backslash inside code (e.g. in .\"
 
 (defun load-target ()
   "Layer 2 + 3: send lisp.fs, then the Forth that prims.lisp compiles to."
-  (forth "")
+  (forth "" :timeout 30)
   (forth-lines (with-open-file (s (here "lisp.fs"))
                  (loop for l = (read-line s nil) while l collect l)))
   (forth-lines (compile-file-to-forth (here "prims.lisp")))
@@ -233,7 +233,7 @@ followed by a space or the end of the line. A backslash inside code (e.g. in .\"
 (defun demo ()
   (connect)
   (format t "~%=== Layer 1: host Lisp compiles Lisp to Forth and runs it on the chip ===~%")
-  (forth "")
+  (forth "" :timeout 30)
   (dolist (line (compile-file-to-forth (here "demo.lisp")))
     (format t "[compiled] ~a~%" line)
     (forth line))

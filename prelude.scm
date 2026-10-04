@@ -310,3 +310,22 @@
               (else (loop (cdr cs))))))))
 (define-syntax case-lambda
   (%macro (lambda (f) (list '%case-lambda (cons 'list (map (lambda (c) (list 'cons (list 'quote (%arity (car c))) (cons 'lambda c))) (cdr f)))))))
+
+; ---- item 6: primitives check their argument count: (name min max), max 255 = any ----
+(for-each (lambda (a) (%arity! (car a) (cadr a) (caddr a)))
+  '((+ 0 255) (- 1 255) (* 0 255) (/ 1 255) (quotient 2 2) (remainder 2 2) (modulo 2 2)
+    (= 1 255) (< 1 255) (> 1 255) (<= 1 255) (>= 1 255) (eq? 2 2) (eqv? 2 2)
+    (car 1 1) (cdr 1 1) (cons 2 2) (null? 1 1) (pair? 1 1) (symbol? 1 1) (procedure? 1 1) (boolean? 1 1)
+    (exact 1 1) (inexact 1 1) (number? 1 1) (real? 1 1) (complex? 1 1) (integer? 1 1) (rational? 1 1)
+    (exact? 1 1) (inexact? 1 1) (exact-integer? 1 1) (%numerator 1 1) (%denominator 1 1)
+    (nan? 1 1) (infinite? 1 1) (%ftruncate 1 1) (%fsqrt 1 1)
+    (apply 2 255) (display 1 2) (write 1 2) (newline 0 1)
+    (string? 1 1) (vector? 1 1) (bytevector? 1 1) (char? 1 1) (char->integer 1 1) (integer->char 1 1)
+    (string-length 1 1) (vector-length 1 1) (bytevector-length 1 1)
+    (string-ref 2 2) (string-set! 3 3) (vector-ref 2 2) (vector-set! 3 3)
+    (bytevector-u8-ref 2 2) (bytevector-u8-set! 3 3) (make-string 1 2) (make-vector 1 2) (make-bytevector 1 2)
+    (%string->list 3 3) (%vector->list 3 3) (%bytevector->list 1 1)
+    (list->string 1 1) (list->vector 1 1) (list->bytevector 1 1)
+    (%substring 3 3) (%string-append2 2 2) (%string-compare 2 2) (string->symbol 1 1) (symbol->string 1 1)
+    (set-car! 2 2) (set-cdr! 2 2) (%macro 1 1) (%callcc 1 1) (%make-record 1 255) (%record? 1 1)
+    (%record-type 1 1) (%record-ref 2 2) (%record-set! 3 3) (%arity! 3 3)))

@@ -127,6 +127,7 @@ token quasiquote intern constant s-qq  token unquote intern constant s-uq
 token unquote-splicing intern constant s-uqs  token %syntax-rules intern constant s-%sr
 token *handlers* intern constant s-handlers  token %make-error intern constant s-mkerr
 token raise intern constant s-raise
+token define intern constant s-define  token define-syntax intern constant s-defsyn
 token else intern constant s-else
 token => intern constant s-=>
 
@@ -334,10 +335,13 @@ token => intern constant s-=>
 0 variable kval  0 variable krp
 : throwk ( v k -- ) dup cdr #f = if s" continuation called outside its extent (escape-only)" err then
   swap kval ! cdr dup cdr unfix krp ! car unfix sp! kval @ krp @ rp! ;
+: arity? ( f args -- f args ) over cdr dup 0= if drop exit then unfix over listlen
+  over 255 and over > if s" wrong number of arguments" err then
+  swap 8 rshift 255 and dup 255 = if 2drop exit then > if s" wrong number of arguments" err then ;
 : applyc ( f args -- x env 0 | v -1 )
   over conttag box? if car swap throwk then
   over proc? 0= if s" not a procedure" err then
-  over car fixnum? if swap car unfix cells prims + @ execute -1 exit then
+  over car fixnum? if arity? swap car unfix cells prims + @ execute -1 exit then
   over car swap rot cdr dup >r cdr frame bind r> car swap seq ;
 : apply ( f args -- v ) applyc if exit then (eval) ;
 : eval ( x env -- v )
@@ -360,8 +364,8 @@ token => intern constant s-=>
 : f-lambda ( x env ) >r cdr dup car swap cdr r> closure -1 ;
 : f-begin ( x env ) swap cdr swap seq ;
 : f-define ( x env ) swap cdr dup car sym? if
-    dup car >r cdr car over (eval) r@ rot def-bind r> -1 exit then
-  dup car car >r dup car cdr swap cdr 2 pick closure r@ rot def-bind r> -1 ;
+    dup car >r cdr car over (eval) r@ rot def-bind rdrop unspec -1 exit then
+  dup car car >r dup car cdr swap cdr 2 pick closure r@ rot def-bind rdrop unspec -1 ;
 : f-set ( x env ) swap cdr dup car >r cdr car over (eval) swap r@ swap where
   ?dup if cdr! else r@ cdr! then rdrop unspec -1 ;
 : lbind ( binds env eenv -- env' )  \ evaluate each (name expr) in eenv, bind onto env
@@ -496,6 +500,8 @@ token => intern constant s-=>
 : p-recref ( args -- v ) arg2 num 1+ swap rectag chk cdr swap 4 ix @ ;
 : p-recset ( args -- v ) arg3 >r num 1+ swap rectag chk cdr swap 4 ix r> swap ! unspec ;
 : p-reset ( args -- ) drop repl-reset ;
+: p-arity! ( args -- v ) arg3 num 8 lshift swap num or fix swap cdr
+  dup proc? 0= if s" not a primitive" err then cdr! unspec ;
 : raise-error ( i a n -- i a n ) \ with a Scheme handler installed, raise an error object
   inerr @ if exit then  s-handlers cdr pair? 0= if exit then  rsave @ 0= if exit then
   -1 inerr !  2 pick 2 pick 2 pick
@@ -540,8 +546,12 @@ token => intern constant s-=>
 ' p-forth defprim forth
 ' p-macro defprim %macro   ' p-callcc defprim %callcc   ' p-mkrec defprim %make-record
 ' p-rec? defprim %record?   ' p-rectype defprim %record-type   ' p-recref defprim %record-ref
-' p-recset defprim %record-set!   ' p-reset defprim %repl-reset
+' p-recset defprim %record-set!   ' p-reset defprim %repl-reset   ' p-arity! defprim %arity!
 
-: repl begin 0 raw ! ." > " read 0 eval dup unspec = if drop else print then cr again ;
+: echo ( v form -- v' ) \ for a top-level (define name ...), show the name instead of nothing
+  over unspec <> if drop exit then dup pair? 0= if drop exit then
+  dup car dup s-define = swap s-defsyn = or 0= if drop exit then
+  cdr car dup pair? if car then nip ;
+: repl begin 0 raw ! ." > " read dup >r 0 eval r> echo dup unspec = if drop else print then cr again ;
 ' repl 'repl !
 : lisp ( -- ) sp@ ssave ! rp@ rsave ! 1 lpos ! 0 llen ! -1 pk ! cr repl ;

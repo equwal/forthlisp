@@ -114,7 +114,7 @@ What this design takes from them:
 | 1-2 assembler | `asm-test.lisp`: every encoder form vs `arm-none-eabi-as` (incl. FPv4-SP), plus repeated label references | 105/105 |
 | 3 kernel | `forth-tests.txt` via `host.lisp ktest`, fresh boot | 71/71 |
 | 4 Scheme | chibi-scheme's R7RS suite, `tests/r7rs/`, via `host.lisp suite` | see `tests/r7rs/results.txt` |
-| 4 Scheme | our own regression suite `r7rs-tests.scm` via `host.lisp test` | 380/380 |
+| 4 Scheme | our own regression suite `r7rs-tests.scm` via `host.lisp test` | 390/390 |
 
 - Kernel image: about 10.4 KiB of flash, 197 words (FPU words `f+ f- f* f/ s>f f>s fsqrt f< f=`).
 - RAM after `lisp.fs`, `prims.lisp` and `prelude.scm` load:
@@ -194,9 +194,11 @@ Our own suite below stays local: a reported sieve program, string cases and thos
   report as exhausted.
 - Symbols are never garbage collected. Their names share a 10 KiB buffer.
 - No libraries (`import`) and no ports beyond the console yet.
-- Primitives check argument types but not arity; extra arguments are ignored.
+- Primitives check their argument count (a table in `prelude.scm`); a wrong count raises
+  `wrong number of arguments`. Closures check theirs (`too few arguments`, `too many arguments`).
 - Recursion depth is bounded by the 4 KiB stacks: non-tail recursion raises `too deep` between 150 and 200 levels (measured with `(d 150)` and `(d 200)`).
-- `define` returns the defined symbol (R7RS leaves the value unspecified).
+- `define` returns an unspecified value. The REPL echoes the name of a top-level `define` or
+  `define-syntax` as a convenience; the name is not the value.
 
 ## Implementation
 
