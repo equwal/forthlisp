@@ -1,0 +1,55 @@
+CHIP SCHEME CHEAT SHEET   (R7RS-small subset, written in Forth, emulated STM32F446)
+==================================================================================
+Start:  stm32-lisp          (boots QEMU, loads the Scheme, gives the  >  prompt)
+Layers: assembly -> SBCL breadboard -> our own Forth kernel -> this Scheme.
+        The Scheme is Forth source loaded through the chip's Forth console.
+Edit:   Backspace and Delete both erase.  An expression may span lines.
+
+SWITCHING
+  (forth)          leave Scheme, back to the Forth  ok.  prompt
+  lisp             (at the Forth prompt) re-enter Scheme
+  Ctrl-C           quit QEMU
+
+DATA
+  42  -7           exact integers, 31 bits, no overflow check
+  #t #f            booleans; only #f is false ('() is true)
+  'a  '(1 2 . 3)   symbols, lists, dotted pairs
+  "a b\n"  #(1 2 3) strings, vectors
+
+SPECIAL FORMS
+  (define x 10)  (define (f a . rest) ...)   (set! x 11)
+  (lambda (x) ...)  (lambda args ...)        (begin e1 e2)
+  (if c a b)  (when c ...)  (unless c ...)   (and ...)  (or ...)
+  (cond (test e) (test => proc) (else e))    (case k ((1 2) e) (else e))
+  (let ((x 1)) ...)  (let* ...)  (letrec ...)  (letrec* ...)
+  (let loop ((i 0)) (if (< i 10) (loop (+ i 1)) i))      named let
+  (do ((i 0 (+ i 1))) ((= i 5) 'done) body)
+
+PROCEDURES
+  + - * quotient remainder modulo abs max min gcd lcm square
+  = < > <= >= zero? positive? negative? odd? even?
+  eq? eqv? equal? not  car cdr cons set-car! set-cdr! caar cadr cdar cddr caddr
+  list length append reverse list-tail list-ref list-copy make-list
+  memq memv member assq assv assoc map for-each apply
+  null? pair? list? symbol? number? integer? boolean? procedure?
+  string? string-length string-append string=? string->list list->string`n  make-vector vector vector-ref vector-set! vector-length vector->list`n  sqrt (exact floor) floor round   display write newline
+
+EXAMPLES TO TYPE
+  (define (fact n) (if (< n 2) 1 (* n (fact (- n 1)))))
+  (fact 10)                                => 3628800
+  (map (lambda (n) (* n n)) '(1 2 3 4))    => (1 4 9 16)
+  (map + '(1 2 3) '(10 20 30))             => (11 22 33)
+  (let loop ((i 0)) (if (< i 10000) (loop (+ i 1)) i))   => 10000
+  (assq 'b '((a 1) (b 2)))                 => (b 2)
+  (apply + 1 2 '(3 4))                     => 10
+  (vector-ref (make-vector 3 7) 1)         => 7
+  (string-append "a " "b")                 => "a b"
+
+LIMITS
+  64 KiB heap (8191 cells), garbage collected at any time
+  tail calls run in constant stack; deep non-tail recursion: too deep
+  no chars, floats, macros, call/cc; vector-ref walks a list
+  Errors (unbound variable, not a pair, too deep, ...) return to  >
+
+FORTH SIDE (after (forth))
+  1 2 + .          => 3          words      list Forth words
