@@ -239,7 +239,8 @@ def results_section():
                           ("3 Forth kernel words", "kernel-tests.txt", r"kernel tests: .*"),
                           ("4 Scheme: chibi-scheme R7RS suite (pass / fail / skip / total)",
                            "tests/r7rs/results.txt", r"r7rs suite: .*"),
-                          ("4 Scheme: our own regression suite", "conformance.txt", r"conformance: .*")):
+                          ("4 Scheme: our own regression suite", "conformance.txt", r"conformance: .*"),
+                          ("CI: all three public repos in a clean ubuntu:24.04 container", "ci-summary.txt", r"CI: .*")):
         m = re.search(pat, read(f) or "")
         if m:
             rows.append([esc(layer), code(f), esc(m.group(0))])
