@@ -475,11 +475,14 @@ token => intern constant s-=>
 : p-num ( args -- v ) car numden drop >fix ;
 : p-den ( args -- v ) car numden nip >fix ;
 : p-nan? ( args -- v ) car dup flo? if cdr dup $7F800000 and $7F800000 = swap $7FFFFF and 0<> and bool exit then drop #f ;
+: p-ftrunc ( args -- v ) car cdr dup fint? if flo exit then f>s s>f flo ;   \ toward zero
+: p-fsqrt ( args -- v ) car >float fsqrt flo ;
 : p-inf? ( args -- v ) car dup flo? if cdr $7FFFFFFF and $7F800000 = bool exit then drop #f ;
 ' p-exact defprim exact   ' p-inexact defprim inexact   ' p-eqv defprim eqv?
 ' p-number? defprim number?   ' p-number? defprim real?   ' p-number? defprim complex?
 ' p-integer? defprim integer?   ' p-rational? defprim rational?
 ' p-exact? defprim exact?   ' p-inexact? defprim inexact?   ' p-exint? defprim exact-integer?
+' p-ftrunc defprim %ftruncate   ' p-fsqrt defprim %fsqrt
 ' p-num defprim %numerator   ' p-den defprim %denominator   ' p-nan? defprim nan?   ' p-inf? defprim infinite?
 ' p-apply defprim apply   ' p-display defprim display   ' p-write defprim write
 ' p-string? defprim string?   ' p-vector? defprim vector?   ' p-bv? defprim bytevector?

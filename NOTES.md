@@ -114,7 +114,7 @@ What this design takes from them:
 | 1-2 assembler | `asm-test.lisp`: every encoder form vs `arm-none-eabi-as` (incl. FPv4-SP), plus repeated label references | 105/105 |
 | 3 kernel | `forth-tests.txt` via `host.lisp ktest`, fresh boot | 71/71 |
 | 4 Scheme | chibi-scheme's R7RS suite, `tests/r7rs/`, via `host.lisp suite` | see `tests/r7rs/results.txt` |
-| 4 Scheme | our own regression suite `r7rs-tests.scm` via `host.lisp test` | 297/297 |
+| 4 Scheme | our own regression suite `r7rs-tests.scm` via `host.lisp test` | 317/317 |
 
 - Kernel image: about 10.4 KiB of flash, 197 words (FPU words `f+ f- f* f/ s>f f>s fsqrt f< f=`).
 - RAM after `lisp.fs`, `prims.lisp` and `prelude.scm` load:
@@ -145,7 +145,8 @@ What this design takes from them:
 - A form that errors counts all of its unreported tests as failed. If the chip stops
   answering, every later test counts as failed.
 - First run on the own stack: 244 passed, 78 failed, 810 skipped, 1132 total. After item 1 (numbers): 302 passed, 119 failed, 711 skipped. After item 2 (characters,
-  strings, vectors, bytevectors): 486 passed, 123 failed, 523 skipped. It found two
+  strings, vectors, bytevectors): 486 passed, 123 failed, 523 skipped. After item 3 (sqrt,
+  rounding): 500 passed, 109 failed, 523 skipped. It found two
   bugs, now fixed and covered by local regression tests: `list?` looped on a circular list,
   and `case` lacked `=>`.
 
@@ -171,7 +172,7 @@ Our own suite below stays local: a reported sieve program, string cases and thos
   are 8-bit. Strings, vectors and bytevectors live in a 16 KiB blob heap, with O(1) access.
   The GC compacts live blobs. Missing from the string library: `string-fill!`, `string-copy!`,
   case conversion of whole strings, and `-ci` string comparisons.
-- `sqrt` returns the exact integer floor of the root (`(sqrt 500)` is 22, not 22.36); `floor`, `round` and friends are the identity on integers.
+- `sqrt` is exact for exact squares (`(sqrt 1/4)` is `1/2`) and inexact otherwise. A negative argument gives `+nan.0`, because there are no complex numbers. `exact-integer-sqrt` returns a list `(s r)` until multiple values exist. `floor`, `ceiling`, `truncate` and `round` (half to even) handle rationals and floats. No `exp`, `log` or trigonometry yet.
 - No `define-syntax`/`syntax-rules`, `quasiquote`, `delay`/`force`, `call/cc`, `dynamic-wind`, `values`, exceptions, `guard`, parameters, records, libraries (`import`), ports beyond the console.
 - Errors print a message and return to the prompt; they are not raisable objects.
 - Primitives check argument types but not arity; extra arguments are ignored.

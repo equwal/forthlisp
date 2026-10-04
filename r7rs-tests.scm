@@ -221,7 +221,7 @@ y ==> (a . 4)
 (vector->list (vector 1 2 3)) ==> (1 2 3)
 ; sqrt/floor on exact integers
 (sqrt 16) ==> 4
-(floor (sqrt 500)) ==> 22
+(floor (sqrt 500)) ==> 22.0
 (floor 7) ==> 7
 ; regression: a reported sieve program, a docstring body, vectors, do, when, named let
 (define (sieve-of-eratosthenes n) "Return list of primes up to n." (if (< n 2) '() (let ((marked (make-vector (+ n 1) #t))) (vector-set! marked 0 #f) (vector-set! marked 1 #f) (do ((i 2 (+ i 1))) ((> i (floor (sqrt n)))) (when (vector-ref marked i) (do ((j (* i i) (+ j i))) ((> j n)) (vector-set! marked j #f)))) (let loop ((i 2) (primes '())) (if (> i n) (reverse primes) (loop (+ i 1) (if (vector-ref marked i) (cons i primes) primes))))))) ==> sieve-of-eratosthenes
@@ -324,3 +324,24 @@ y ==> (a . 4)
 (string->utf8 "AB") ==> #u8(65 66)
 (let loop ((i 0) (s "")) (if (< i 3000) (loop (+ i 1) (string-append "ab" "cd")) (string-length s))) ==> 4
 (let ((v (make-vector 100 1))) (let loop ((i 0)) (if (< i 3000) (begin (make-string 10 #\a) (loop (+ i 1))))) (vector-ref v 99)) ==> 1
+; item 3: sqrt exact for exact squares, inexact otherwise; rounding on non-integers
+(sqrt 1/4) ==> 1/2
+(sqrt 16.0) ==> 4.0
+(exact? (sqrt 2)) ==> #f
+(< 1.4142 (sqrt 2) 1.4143) ==> #t
+(floor -4.3) ==> -5.0
+(ceiling -4.3) ==> -4.0
+(truncate -4.3) ==> -4.0
+(round -4.3) ==> -4.0
+(floor 3.5) ==> 3.0
+(ceiling 3.5) ==> 4.0
+(truncate 3.5) ==> 3.0
+(round 3.5) ==> 4.0
+(round 2.5) ==> 2.0
+(round 7/2) ==> 4
+(round -7/2) ==> -4
+(round 7/10) ==> 1
+(floor -7/2) ==> -4
+(ceiling -7/2) ==> -3
+(truncate -7/2) ==> -3
+(floor 5) ==> 5

@@ -1,4 +1,4 @@
-r7rs suite: 486 passed, 123 failed, 523 skipped, 1132 total
+r7rs suite: 500 passed, 109 failed, 523 skipped, 1132 total
 setup forms skipped: 48
 
 skipped tests by reason:
@@ -72,30 +72,6 @@ failures:
     => not a number
 [6.2 Numbers] (test 288.0 (lcm 32.0 -36))
     => not a number
-[6.2 Numbers] (test -5.0 (floor -4.3))
-    => <<fail -4.3>>
-[6.2 Numbers] (test -4.0 (ceiling -4.3))
-    => <<fail -4.3>>
-[6.2 Numbers] (test -4.0 (truncate -4.3))
-    => <<fail -4.3>>
-[6.2 Numbers] (test -4.0 (round -4.3))
-    => <<fail -4.3>>
-[6.2 Numbers] (test 3.0 (floor 3.5))
-    => <<fail 3.5>>
-[6.2 Numbers] (test 4.0 (ceiling 3.5))
-    => <<fail 3.5>>
-[6.2 Numbers] (test 3.0 (truncate 3.5))
-    => <<fail 3.5>>
-[6.2 Numbers] (test 4.0 (round 3.5))
-    => <<fail 3.5>>
-[6.2 Numbers] (test 4 (round 7/2))
-    => <<fail 7/2>>
-[6.2 Numbers] (test 1 (round 7/10))
-    => <<fail 7/10>>
-[6.2 Numbers] (test -4 (round -7/2))
-    => <<fail -7/2>>
-[6.2 Numbers] (test -1 (round -7/10))
-    => <<fail -7/10>>
 [6.2 Numbers] (test 1/3 (rationalize (exact .3) 1/10))
     => unbound variable: rationalize
 [6.2 Numbers] (test 1.0 (inexact (exp 0)))
@@ -152,8 +128,6 @@ failures:
     => unbound variable: atan
 [6.2 Numbers] (test -0.785398163397448 (atan -1.0 1.0))
     => unbound variable: atan
-[6.2 Numbers] (test 1.4142135623731 (sqrt 2))
-    => <<fail 1>>
 [6.2 Numbers] (test 27 (expt 3 3))
     => unbound variable: expt
 [6.2 Numbers] (test 1 (expt 0 0))
@@ -172,8 +146,6 @@ failures:
     => too many arguments
 [6.3 Booleans] (test #f (boolean=? #t #t #f))
     => too many arguments
-[6.4 Lists] (test 'c (list-ref '(a b c d) (exact (round 1.8))))
-    => not a pair
 [6.4 Lists] (test '(0 ("Sue" "Sue") "Anna") (let ((lst (list 0 '(2 2 2 2) "Anna"))) (list-set! lst 1 '("Sue" "Sue")) lst))
     => unbound variable: list-set!
 [6.4 Lists] (test '("b" "c") (member "B" '("a" "b" "c") string-ci=?))

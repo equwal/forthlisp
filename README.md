@@ -52,8 +52,8 @@ Needs SBCL, `qemu-system-arm`, `arm-none-eabi-as`/`objcopy` (for the assembler t
 
 ## Test counts (STM32F446 target, QEMU)
 
-- Our regression suite: see `conformance.txt` (297/297 at publication)
-- chibi-scheme R7RS suite: see `tests/r7rs/results.txt` (486 passed, 123 failed, 523 skipped
+- Our regression suite: see `conformance.txt` (317/317 at publication)
+- chibi-scheme R7RS suite: see `tests/r7rs/results.txt` (500 passed, 109 failed, 523 skipped
   of 1132 at publication; every skip names its reason)
 
 ## Limits
