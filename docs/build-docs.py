@@ -292,6 +292,10 @@ def main():
     notes = read("NOTES.md")
     if notes:
         body.append(md(notes, toc, "spec-", base=3))
+    bg = read("docs/background.md")
+    if bg:
+        bg = "\n".join(l for l in bg.split("\n") if "TODO (jose)" not in l and not l.startswith("<!--"))
+        sec(3, "Background (outline, with sources)", md(bg.split("\n", 1)[1], [], "bg-", base=4))
     sec(3, "Special forms (from lisp.fs)", forms_section())
     sec(3, "Primitives (from prims.lisp)", prims_section())
     sec(3, "Library procedures (from prelude.scm)", prelude_section())

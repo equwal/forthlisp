@@ -422,3 +422,28 @@ y ==> (a . 4)
 (begin (define dw 6)) ==>
 (define dz 7) ==> dz
 (define (dfn a) a) ==> dfn
+; item 9: import accepted; string ports, console ports, eof
+(import (scheme base)) ==>
+(import (scheme base) (scheme write)) ==>
+(let ((p (open-output-string))) (write 'abc p) (display " x" p) (get-output-string p)) ==> "abc x"
+(let ((p (open-output-string))) (write-char #\z p) (write-string "yy" p) (write 1/2 p) (get-output-string p)) ==> "zyy1/2"
+(let ((p (open-input-string "hi there"))) (list (read-char p) (peek-char p) (read-char p))) ==> (#\h #\i #\i)
+(read-line (open-input-string "line one\nline two")) ==> "line one"
+(read (open-input-string "(a b . c)")) ==> (a b . c)
+(let ((p (open-input-string "1 2"))) (list (read p) (read p) (eof-object? (read p)))) ==> (1 2 #t)
+(eof-object? (eof-object)) ==> #t
+(read-string 3 (open-input-string "abcdef")) ==> "abc"
+(guard (e ((read-error? e) 'bad)) (read (open-input-string ")"))) ==> bad
+(guard (e ((file-error? e) 'nofile)) (open-input-file "x")) ==> nofile
+(output-port? (current-output-port)) ==> #t
+(begin (write-string "hey" (current-output-port)) 'done) ==> heydone
+(+ 1 2) ==> 3
+; regression: an uncaught error inside with-exception-handler must not leave the handler installed
+
+(with-exception-handler (lambda (e) 0) (lambda () (car 1)))
+
+(car 5) ==> not a pair
+
+(dynamic-wind (lambda () #f) (lambda () (car 1)) (lambda () #f))
+
+(length *winders*) ==> 0

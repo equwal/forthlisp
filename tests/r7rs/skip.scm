@@ -6,7 +6,6 @@
 ;   (nonlatin1 "" "reason")    forms with a character beyond Latin-1
 ;   (literal "KIND" "reason")   forms with a number literal of KIND: bignum float ratio complex prefix
 ; Remove an entry when the feature lands; the skip count must only go down.
-(head "import" "no libraries: (import ...) not supported")
 (head "test-numeric-syntax" "no string->number / number->string")
 (head "test-precision" "no inexact reals")
 (head "test-read-error" "no read procedure or ports")

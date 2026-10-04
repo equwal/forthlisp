@@ -1,8 +1,7 @@
-r7rs suite: 603 passed, 140 failed, 389 skipped, 1132 total
-setup forms skipped: 15
+r7rs suite: 617 passed, 126 failed, 389 skipped, 1132 total
+setup forms skipped: 14
 
 skipped tests by reason:
-     0  no libraries: (import ...) not supported
     12  no bignums: fixnums are 31-bit, beyond that is an overflow error
      0  no number->string
      9  uses f, skipped: no number->string
@@ -265,23 +264,5 @@ failures:
     => unbound variable: list-set!
 [6.10 Control Features] (test '(connect talk1 disconnect connect talk2 disconnect) (let ((path '()) (c #f)) (let ((add (lambda (s) (set! path (cons s path))))) (dynamic-wind (lambda ()
     => continuation called outside its extent (escape-only)
-[6.11 Exceptions] (test #t (file-error? (guard (exn (else exn)) (open-input-file " no such file "))))
-    => <<fail #f>>
-[6.11 Exceptions] (test #t (read-error? (guard (exn (else exn)) (read (open-input-string ")")))))
-    => <<fail #f>>
-[6.11 Exceptions] (test #t (read-error? (guard (exn (else exn)) (read (open-input-string "\"")))))
-    => <<fail #f>>
 [6.11 Exceptions] (test 'caught-another-exception (test-exception-handler-2 -1))
     => handler returned from raise an-error
-[6.11 Exceptions] (let* ((out (open-output-string)) (value (with-exception-handler (lambda (con) (cond ((not (list? con)) (raise con)) ((list? con) (display (car con) out)) (else
-    => handler returned from raise #<record %error-object>
-[6.11 Exceptions] (let* ((out (open-output-string)) (value (test-exception-handler-3 0 out))) (test 'exception value) (test "condition: an-error!" (get-output-string out)))
-    => handler returned from raise #<record %error-object>
-[6.11 Exceptions] (let* ((out (open-output-string)) (value (test-exception-handler-4 1 out))) (test "" (get-output-string out)) (test 'positive value))
-    => handler returned from raise #<record %error-object>
-[6.11 Exceptions] (let* ((out (open-output-string)) (value (test-exception-handler-4 -1 out))) (test "" (get-output-string out)) (test 'negative value))
-    => handler returned from raise #<record %error-object>
-[6.11 Exceptions] (let* ((out (open-output-string)) (value (test-exception-handler-4 0 out))) (test "reraised 0!" (get-output-string out)) (test 'zero value))
-    => handler returned from raise #<record %error-object>
-[6.11 Exceptions] (test 'caught-d (guard (condition ((assq 'c condition) 'caught-c) ((assq 'd condition) 'caught-d)) (list (sqrt 8) (guard (condition ((assq 'a condition) => cdr)
-    => out of memory

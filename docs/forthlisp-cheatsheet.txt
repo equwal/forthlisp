@@ -11,45 +11,44 @@ SWITCHING
   Ctrl-C           quit QEMU
 
 DATA
-  42  -7           exact integers, 31 bits, no overflow check
-  #t #f            booleans; only #f is false ('() is true)
-  'a  '(1 2 . 3)   symbols, lists, dotted pairs
-  "a b\n"  #(1 2 3) strings, vectors
+  42  -7  1/3  2.5     exact integers (31 bits; overflow is an error), rationals,
+                       single-precision floats
+  #t #f                booleans; only #f is false ('() is true)
+  #\a  "a b\n"         characters (bytes), strings
+  #(1 2 3)  #u8(1 2)   vectors, bytevectors
+  'a  '(1 2 . 3)       symbols, lists, dotted pairs
 
-SPECIAL FORMS
+SPECIAL FORMS AND MACROS
   (define x 10)  (define (f a . rest) ...)   (set! x 11)
-  (lambda (x) ...)  (lambda args ...)        (begin e1 e2)
-  (if c a b)  (when c ...)  (unless c ...)   (and ...)  (or ...)
-  (cond (test e) (test => proc) (else e))    (case k ((1 2) e) (else e))
-  (let ((x 1)) ...)  (let* ...)  (letrec ...)  (letrec* ...)
-  (let loop ((i 0)) (if (< i 10) (loop (+ i 1)) i))      named let
-  (do ((i 0 (+ i 1))) ((= i 5) 'done) body)
+  (lambda (x) ...)  (if c a b)  (cond ...)  (case ...)  (and ...)  (or ...)
+  (let ...)  (let* ...)  (letrec ...)  (do ...)  (when ...)  (unless ...)
+  (define-syntax m (syntax-rules () ((_ x) ...)))   not hygienic
+  `(a ,b ,@c)   (delay x)  (force p)   (guard (e (#t ...)) body)
+  (parameterize ((p v)) ...)   (define-record-type ...)   (case-lambda ...)
+  (let-values (((q r) (floor/ 7 2))) ...)   (call/cc ...) escape-only
 
-PROCEDURES
-  + - * quotient remainder modulo abs max min gcd lcm square
-  = < > <= >= zero? positive? negative? odd? even?
-  eq? eqv? equal? not  car cdr cons set-car! set-cdr! caar cadr cdar cddr caddr
-  list length append reverse list-tail list-ref list-copy make-list
-  memq memv member assq assv assoc map for-each apply
-  null? pair? list? symbol? number? integer? boolean? procedure?
-  string? string-length string-append string=? string->list list->string`n  make-vector vector vector-ref vector-set! vector-length vector->list`n  sqrt (exact floor) floor round   display write newline
-
-EXAMPLES TO TYPE
+EXAMPLES TO TYPE   (each one is checked on the emulated chip)
   (define (fact n) (if (< n 2) 1 (* n (fact (- n 1)))))
-  (fact 10)                                => 3628800
-  (map (lambda (n) (* n n)) '(1 2 3 4))    => (1 4 9 16)
-  (map + '(1 2 3) '(10 20 30))             => (11 22 33)
+  (fact 10)                                   => 3628800
+  (map + '(1 2 3) '(10 20 30))                => (11 22 33)
+  (/ 6 4)                                     => 3/2
+  (+ 1/2 0.25)                                => 0.75
+  (sqrt 16)                                   => 4
+  (round 7/2)                                 => 4
+  (string-append "ab" "cd")                   => "abcd"
+  (vector-ref #(1 2 3) 2)                     => 3
+  (char-upcase #\a)                           => #\A
+  (let ((x 5)) `(x ,x ,@(list 1 2)))          => (x 5 1 2)
+  (call/cc (lambda (k) (+ 1 (k 42))))         => 42
+  (guard (e ((string? e) e)) (raise "oops"))  => "oops"
+  (guard (e (#t (error-object-message e))) (car 5))   => "not a pair"
+  (let-values (((q r) (floor/ 17 5))) (list q r))      => (3 2)
+  (force (delay (* 6 7)))                     => 42
   (let loop ((i 0)) (if (< i 10000) (loop (+ i 1)) i))   => 10000
-  (assq 'b '((a 1) (b 2)))                 => (b 2)
-  (apply + 1 2 '(3 4))                     => 10
-  (vector-ref (make-vector 3 7) 1)         => 7
-  (string-append "a " "b")                 => "a b"
+  (+ 1073741823 1)                            => overflow
 
 LIMITS
-  64 KiB heap (8191 cells), garbage collected at any time
+  60 KiB cons heap, 12 KiB string/vector heap, 10 KiB symbol names
   tail calls run in constant stack; deep non-tail recursion: too deep
-  no chars, floats, macros, call/cc; vector-ref walks a list
-  Errors (unbound variable, not a pair, too deep, ...) return to  >
-
-FORTH SIDE (after (forth))
-  1 2 + .          => 3          words      list Forth words
+  continuations are escape-only; syntax-rules is not hygienic
+  Errors print a message and return to  >  unless a handler catches them
